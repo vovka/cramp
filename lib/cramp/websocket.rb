@@ -25,6 +25,8 @@ module Cramp
       upgrade << "#{@key3}WebSocket-Location: #{location}\r\n\r\n"
       upgrade << challenge unless challenge.nil?
 
+      Cramp.log :sent, upgrade
+
       upgrade
     end
 
@@ -72,6 +74,7 @@ module Cramp
     end
 
     def render(body)
+      Cramp.log :sent, body
       @body.call("\x00#{body}\xff")
     end
 

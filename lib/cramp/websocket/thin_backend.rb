@@ -5,6 +5,7 @@ silence_warnings { Thin::Server::DEFAULT_TIMEOUT = 0 }
 class Thin::Connection
   # Called when data is received from the client.
   def receive_data(data)
+    Cramp.log :received, data
     trace { data }
 
     case @serving

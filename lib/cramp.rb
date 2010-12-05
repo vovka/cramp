@@ -16,7 +16,7 @@ require 'rack'
 module Cramp
   VERSION = '0.10'
 
-  mattr_accessor :logger
+  mattr_accessor :logger, :debug
 
   autoload :Action, "cramp/action"
   autoload :Websocket, "cramp/websocket"
@@ -26,4 +26,23 @@ module Cramp
   autoload :Abstract, "cramp/abstract"
   autoload :Callbacks, "cramp/callbacks"
   autoload :TestCase, "cramp/test_case"
+
+  def self.log direction, msg=''
+    if debug
+      puts "\n" + (msg.split("\n").map do |line|
+        "#{Cramp.direction_name(direction)}: #{line}"
+      end.join("\n")) + "\n"
+    else
+      puts "no debug for today"
+    end
+  end
+
+  def self.direction_name smb
+    case smb
+    when :received
+      'rcvd>>>'
+    when :sent
+      'sent>>>'
+    end
+  end
 end
