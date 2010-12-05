@@ -8,18 +8,22 @@ module Cramp
 
     def websocket_upgrade_data
       location  = "ws://#{@env['HTTP_HOST']}#{@env['REQUEST_PATH']}"
-      challenge = solve_challange(
-        @env['HTTP_SEC_WEBSOCKET_KEY1'],
-        @env['HTTP_SEC_WEBSOCKET_KEY2'],
-        @env['rack.input'].read
-      )
+      @key3 = ''
+      if @env.include? 'HTTP_SEC_WEBSOCKET_KEY1' and @env.include? 'HTTP_SEC_WEBSOCKET_KEY2'
+        challenge = solve_challange(
+          @env['HTTP_SEC_WEBSOCKET_KEY1'],
+          @env['HTTP_SEC_WEBSOCKET_KEY2'],
+          @env['rack.input'].read
+        )
+        @key3 = 'Sec-'
+      end
 
       upgrade =  "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
       upgrade << "Upgrade: WebSocket\r\n"
       upgrade << "Connection: Upgrade\r\n"
-      upgrade << "Sec-WebSocket-Origin: #{@env['HTTP_ORIGIN']}\r\n"
-      upgrade << "Sec-WebSocket-Location: #{location}\r\n\r\n"
-      upgrade << challenge
+      upgrade << "#{@key3}WebSocket-Origin: #{@env['HTTP_ORIGIN']}\r\n"
+      upgrade << "#{@key3}WebSocket-Location: #{location}\r\n\r\n"
+      upgrade << challenge unless challenge.nil?
 
       upgrade
     end
