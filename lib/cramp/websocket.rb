@@ -8,14 +8,43 @@ module Cramp
 
     def websocket_upgrade_data
       location  = "ws://#{@env['HTTP_HOST']}#{@env['REQUEST_PATH']}"
+      @key3 = ''
+      if @env.include? 'HTTP_SEC_WEBSOCKET_KEY1' and @env.include? 'HTTP_SEC_WEBSOCKET_KEY2'
+        challenge = solve_challange(
+          @env['HTTP_SEC_WEBSOCKET_KEY1'],
+          @env['HTTP_SEC_WEBSOCKET_KEY2'],
+          @env['rack.input'].read
+        )
+        @key3 = 'Sec-'
+      end
 
       upgrade =  "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
       upgrade << "Upgrade: WebSocket\r\n"
       upgrade << "Connection: Upgrade\r\n"
-      upgrade << "WebSocket-Origin: #{@env['HTTP_ORIGIN']}\r\n"
-      upgrade << "WebSocket-Location: #{location}\r\n\r\n"
+      upgrade << "#{@key3}WebSocket-Origin: #{@env['HTTP_ORIGIN']}\r\n"
+      upgrade << "#{@key3}WebSocket-Location: #{location}\r\n\r\n"
+      upgrade << challenge unless challenge.nil?
+
+      Cramp.log :sent, upgrade
 
       upgrade
+    end
+
+    def solve_challange(first, second, third)
+      # Refer to 5.2 4-9 of the draft 76
+      sum = 
+        [extract_nums(first) / count_spaces(first)].pack("N*") +
+        [extract_nums(second) / count_spaces(second)].pack("N*") +
+        third
+      Digest::MD5.digest(sum)
+    end
+
+    def extract_nums(string)
+      string.scan(/[0-9]/).join.to_i
+    end
+
+    def count_spaces(string)
+      string.scan(/ /).size 
     end
   end
 
@@ -45,6 +74,7 @@ module Cramp
     end
 
     def render(body)
+      Cramp.log :sent, body
       @body.call("\x00#{body}\xff")
     end
 
