@@ -8,19 +8,30 @@ class Thin::Connection
     Cramp.log :received, data
     trace { data }
 
-    case @serving
-    when :websocket
-      callback = @request.env[Thin::Request::WEBSOCKET_RECEIVE_CALLBACK]
-      callback.call(data) if callback
+    if data =~ /^<policy-file-request\/>/
+      domain = @request.env['SERVER_NAME']
+      port = "*"
+      policy_file = "<?xml version=\"1.0\"?>"
+      policy_file << "<!DOCTYPE cross-domain-policy SYSTEM \"http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd\">"
+      policy_file << "<cross-domain-policy>"
+      policy_file << "<allow-access-from domain=\"#{domain.to_s}\" to-ports=\"#{port.to_s}\"/>"
+      policy_file << "</cross-domain-policy>"
+      send_data policy_file
+      terminate_request
     else
-      if @request.parse(data)
-        if @request.websocket?
-          @response.persistent!
-          @response.websocket_upgrade_data = @request.websocket_upgrade_data
-          @serving = :websocket
+      case @serving
+      when :websocket
+        callback = @request.env[Thin::Request::WEBSOCKET_RECEIVE_CALLBACK]
+        callback.call(data) if callback
+      else
+        if @request.parse(data)
+          if @request.websocket?
+            @response.persistent!
+            @response.websocket_upgrade_data = @request.websocket_upgrade_data
+            @serving = :websocket
+          end
+          process
         end
-
-        process
       end
     end
   rescue Thin::InvalidRequest => e
